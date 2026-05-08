@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Steps Sync</string>
-    <string name="status_running">Steps Sync is running in the background.</string>
-    <string name="status_permissions_granted">✔ Health Connect permissions granted.\nSync runs automatically every 24 h.</string>
-    <string name="status_permissions_missing">⚠ Health Connect permissions required.\nTap below to grant them.</string>
-    <string name="btn_grant_permissions">Grant Permissions</string>
+    <string name="status_running">Sincronización diaria activa.</string>
+    <string name="status_permissions_granted">Permiso de pasos concedido. Puedes cerrar la app; la sincronización seguirá en segundo plano.</string>
+    <string name="status_permissions_missing">Falta el permiso de Health Connect para leer pasos.</string>
+    <string name="status_health_connect_unavailable">Health Connect no está disponible o necesita actualización en este dispositivo.</string>
+    <string name="btn_grant_permissions">Conceder permiso</string>
 </resources>

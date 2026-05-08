@@ -9,7 +9,6 @@ android {
 
     defaultConfig {
         applicationId = "com.stepssync"
-        // Health Connect requires minSdk 26 (Android 8.0)
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -27,34 +26,24 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-        // Enable Java 8+ time APIs on older API levels via desugaring
+        // Source and target compatibility are set to Java 17; desugaring keeps newer Java APIs usable on minSdk 26.
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 
 dependencies {
-    // Core
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-
-    // WorkManager – background periodic execution
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-
-    // Health Connect – step data
+    implementation("androidx.activity:activity-ktx:1.9.0")
+    implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
-
-    // Kotlin Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // OkHttp – HTTP POST to webhook
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    // Desugaring for java.time on API < 26 (safety net)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
