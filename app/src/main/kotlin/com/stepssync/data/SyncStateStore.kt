@@ -19,7 +19,13 @@ class SyncStateStore(context: Context) {
         Context.MODE_PRIVATE
     )
 
-    /** Returns true only when the date has already been synced with a non-zero step count. */
+    /** Returns true only when the date has already been synced with a non-zero step count.
+     *
+     * A zero-step result is not considered a confirmed sync: Health Connect may not have
+     * aggregated the data yet, and a subsequent run should re-attempt with the real value.
+     * Once a positive step count has been successfully transmitted, the date is locked to
+     * avoid duplicate webhook deliveries.
+     */
     fun wasDateSynced(date: LocalDate): Boolean {
         val syncedDate = preferences.getString(Constants.LAST_SYNCED_DATE_KEY, null)
         val syncedSteps = preferences.getLong(Constants.LAST_SYNCED_STEPS_KEY, 0L)

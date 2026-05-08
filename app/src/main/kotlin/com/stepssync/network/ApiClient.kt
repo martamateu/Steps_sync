@@ -45,7 +45,7 @@ class ApiClient(
             Log.i(TAG, "Webhook response code: ${response.code} for $date")
             // 2xx = direct success; 3xx = GAS redirect (script already ran successfully)
             if (!response.isSuccessful && response.code !in 300..399) {
-                val body = runCatching { response.body?.string() }.getOrNull()
+                val body = runCatching { response.body?.string() }.getOrElse { "body read failed: ${it.message}" }
                 throw IOException("Webhook error ${response.code} for $date – body: $body")
             }
         }
