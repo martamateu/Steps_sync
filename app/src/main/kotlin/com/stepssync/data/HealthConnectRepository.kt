@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -20,7 +21,8 @@ class HealthConnectRepository(context: Context) {
     }
 
     val requiredPermissions: Set<String> = setOf(
-        HealthPermission.getReadPermission(StepsRecord::class)
+        HealthPermission.getReadPermission(StepsRecord::class),
+        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
     )
 
     fun sdkStatus(): Int =
@@ -59,6 +61,23 @@ class HealthConnectRepository(context: Context) {
         val steps = response[StepsRecord.COUNT_TOTAL] ?: 0L
         Log.i(TAG, "Health Connect returned $steps steps for $syncDate")
         return steps
+    }
+
+    suspend fun getPreviousDayCalories(): Double {
+        val syncDate = previousDayDate()
+        val startTime = syncDate.atStartOfDay(zoneId).toInstant()
+        val endTime = syncDate.plusDays(1).atStartOfDay(zoneId).toInstant()
+
+        val response = client.aggregate(
+            AggregateRequest(
+                metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+        )
+
+        val kcal = response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+        Log.i(TAG, "Health Connect returned $kcal kcal for $syncDate")
+        return kcal
     }
 
     /**

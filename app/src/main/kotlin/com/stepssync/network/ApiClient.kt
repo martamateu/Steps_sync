@@ -28,10 +28,11 @@ class ApiClient(
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
-    suspend fun postSteps(date: LocalDate, steps: Long) = withContext(Dispatchers.IO) {
+    suspend fun postSteps(date: LocalDate, steps: Long, calories: Double) = withContext(Dispatchers.IO) {
         val payload = JSONObject()
             .put("date", date.toString())
             .put("steps", steps)
+            .put("calories", Math.round(calories))
             .toString()
 
         Log.d(TAG, "Posting to webhook: $payload")
