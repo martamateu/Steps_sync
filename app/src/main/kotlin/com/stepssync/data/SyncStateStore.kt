@@ -8,8 +8,9 @@ import java.time.LocalDate
 /**
  * Stores the last successfully transmitted completed day.
  *
- * This local idempotence strategy assumes the completed-day total is final once sent, so the
- * worker will skip re-posting the same date on later runs to avoid duplicate webhook deliveries.
+ * A date is considered "synced" only when the transmitted step count was > 0.
+ * If 0 steps were sent (e.g. Health Connect hadn't aggregated data yet), the date
+ * is stored with a zero marker so a subsequent run can re-transmit the correct value.
  */
 class SyncStateStore(context: Context) {
 
@@ -18,8 +19,17 @@ class SyncStateStore(context: Context) {
         Context.MODE_PRIVATE
     )
 
+    /** Returns true only when the date has already been synced with a non-zero step count.
+     *
+     * A zero-step result is not considered a confirmed sync: Health Connect may not have
+     * aggregated the data yet, and a subsequent run should re-attempt with the real value.
+     * Once a positive step count has been successfully transmitted, the date is locked to
+     * avoid duplicate webhook deliveries.
+     */
     fun wasDateSynced(date: LocalDate): Boolean {
-        return preferences.getString(Constants.LAST_SYNCED_DATE_KEY, null) == date.toString()
+        val syncedDate = preferences.getString(Constants.LAST_SYNCED_DATE_KEY, null)
+        val syncedSteps = preferences.getLong(Constants.LAST_SYNCED_STEPS_KEY, 0L)
+        return syncedDate == date.toString() && syncedSteps > 0L
     }
 
     fun markDateSynced(date: LocalDate, steps: Long) {

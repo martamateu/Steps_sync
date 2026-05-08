@@ -11,8 +11,13 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.stepssync.R
+import com.stepssync.config.Constants
 import com.stepssync.data.HealthConnectRepository
+import com.stepssync.sync.SyncWorker
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -30,6 +35,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var statusText: TextView
     private lateinit var grantButton: Button
+    private lateinit var syncNowButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,12 +60,14 @@ class MainActivity : ComponentActivity() {
                 else -> {
                     statusText.text = getString(R.string.status_health_connect_unavailable)
                     grantButton.isEnabled = false
+                    syncNowButton.isEnabled = false
                 }
             }
         } catch (error: Exception) {
             Log.e(TAG, "Failed to load permission state", error)
             statusText.text = getString(R.string.status_health_connect_unavailable)
             grantButton.isEnabled = false
+            syncNowButton.isEnabled = false
         }
     }
 
@@ -70,6 +78,21 @@ class MainActivity : ComponentActivity() {
             getString(R.string.status_permissions_missing)
         }
         grantButton.isEnabled = !hasPermissions
+        syncNowButton.isEnabled = hasPermissions
+    }
+
+    /** Enqueues a one-time sync run immediately (useful for manual testing). */
+    private fun triggerManualSync() {
+        val request = OneTimeWorkRequestBuilder<SyncWorker>()
+            .addTag(Constants.SYNC_WORK_NAME)
+            .build()
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            "${Constants.SYNC_WORK_NAME}_manual",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+        statusText.text = getString(R.string.status_sync_triggered)
+        Log.i(TAG, "Manual sync enqueued")
     }
 
     private fun createContentView(): LinearLayout {
@@ -88,6 +111,13 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        syncNowButton = Button(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT)
+            text = getString(R.string.btn_sync_now)
+            isEnabled = false
+            setOnClickListener { triggerManualSync() }
+        }
+
         return LinearLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
             orientation = LinearLayout.VERTICAL
@@ -96,6 +126,7 @@ class MainActivity : ComponentActivity() {
             setPadding(padding, padding, padding, padding)
             addView(statusText)
             addView(grantButton)
+            addView(syncNowButton)
         }
     }
 

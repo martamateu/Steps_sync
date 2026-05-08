@@ -1,5 +1,6 @@
 package com.stepssync.network
 
+import android.util.Log
 import com.stepssync.config.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,6 +18,11 @@ class ApiClient(
         .connectTimeout(Constants.HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .readTimeout(Constants.HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .writeTimeout(Constants.HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        // Google Apps Script /exec always returns a 302 redirect.
+        // OkHttp's default redirect handling converts POST→GET, which drops the JSON body.
+        // Disabling redirects means we treat the 302 as a success (the script has already run).
+        .followRedirects(false)
+        .followSslRedirects(false)
         .build()
 ) {
 
@@ -28,15 +34,24 @@ class ApiClient(
             .put("steps", steps)
             .toString()
 
+        Log.d(TAG, "Posting to webhook: $payload")
+
         val request = Request.Builder()
             .url(Constants.WEBHOOK_URL)
             .post(payload.toRequestBody(jsonMediaType))
             .build()
 
         httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IOException("Webhook error ${response.code} for ${date}")
+            Log.i(TAG, "Webhook response code: ${response.code} for $date")
+            // 2xx = direct success; 3xx = GAS redirect (script already ran successfully)
+            if (!response.isSuccessful && response.code !in 300..399) {
+                val body = runCatching { response.body?.string() }.getOrElse { "body read failed: ${it.message}" }
+                throw IOException("Webhook error ${response.code} for $date – body: $body")
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "ApiClient"
     }
 }
