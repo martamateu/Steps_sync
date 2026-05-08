@@ -26,13 +26,14 @@ android {
     }
 
     compileOptions {
+        // Source and target compatibility are set to Java 17; desugaring keeps newer Java APIs usable on minSdk 26.
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 }
 

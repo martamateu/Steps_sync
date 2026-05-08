@@ -5,6 +5,12 @@ import com.stepssync.config.Constants
 import java.time.Instant
 import java.time.LocalDate
 
+/**
+ * Stores the last successfully transmitted completed day.
+ *
+ * This local idempotence strategy assumes the completed-day total is final once sent, so the
+ * worker will skip re-posting the same date on later runs to avoid duplicate webhook deliveries.
+ */
 class SyncStateStore(context: Context) {
 
     private val preferences = context.applicationContext.getSharedPreferences(

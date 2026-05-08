@@ -27,7 +27,8 @@ class HealthConnectRepository(context: Context) {
 
     fun isAvailable(): Boolean = sdkStatus() == HealthConnectClient.SDK_AVAILABLE
 
-    fun targetDate(): LocalDate = LocalDate.now(zoneId).minusDays(1)
+    /** Returns the last fully completed local day, which is the day this app syncs. */
+    fun previousDayDate(): LocalDate = LocalDate.now(zoneId).minusDays(1)
 
     suspend fun hasPermissions(): Boolean {
         if (!isAvailable()) {
@@ -37,10 +38,10 @@ class HealthConnectRepository(context: Context) {
         return grantedPermissions.containsAll(requiredPermissions)
     }
 
-    suspend fun getTodaySteps(): Long {
-        val targetDate = targetDate()
-        val startTime = targetDate.atStartOfDay(zoneId).toInstant()
-        val endTime = targetDate.plusDays(1).atStartOfDay(zoneId).toInstant()
+    suspend fun getPreviousDaySteps(): Long {
+        val syncDate = previousDayDate()
+        val startTime = syncDate.atStartOfDay(zoneId).toInstant()
+        val endTime = syncDate.plusDays(1).atStartOfDay(zoneId).toInstant()
 
         val response = client.aggregate(
             AggregateRequest(
@@ -51,4 +52,11 @@ class HealthConnectRepository(context: Context) {
 
         return response[StepsRecord.COUNT_TOTAL] ?: 0L
     }
+
+    /**
+     * Compatibility entry point kept to match the requested project contract.
+     *
+     * It delegates to [getPreviousDaySteps] so the app always syncs the last fully completed day.
+     */
+    suspend fun getTodaySteps(): Long = getPreviousDaySteps()
 }
