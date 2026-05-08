@@ -1,8 +1,9 @@
 package com.stepssync.config
 
+import com.stepssync.BuildConfig
+
 object Constants {
-    const val WEBHOOK_URL =
-        "https://script.google.com/macros/s/AKfycbxz2MCVeBRvU26UwZ9-7nLLq4FyHSPuX6A0HG-54q8nwbickl1WgbyS4uqxjXiuuFenBw/exec"
+    val WEBHOOK_URL: String get() = BuildConfig.WEBHOOK_URL
 
     const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
     const val SYNC_WORK_NAME = "steps_sync_daily_worker"
