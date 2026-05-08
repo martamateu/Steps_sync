@@ -1,6 +1,7 @@
 package com.stepssync.data
 
 import android.content.Context
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
@@ -32,16 +33,21 @@ class HealthConnectRepository(context: Context) {
 
     suspend fun hasPermissions(): Boolean {
         if (!isAvailable()) {
+            Log.w(TAG, "Health Connect SDK not available (status=${sdkStatus()})")
             return false
         }
         val grantedPermissions = client.permissionController.getGrantedPermissions()
-        return grantedPermissions.containsAll(requiredPermissions)
+        val hasAll = grantedPermissions.containsAll(requiredPermissions)
+        Log.i(TAG, "Permissions check – required=$requiredPermissions granted=$grantedPermissions hasAll=$hasAll")
+        return hasAll
     }
 
     suspend fun getPreviousDaySteps(): Long {
         val syncDate = previousDayDate()
         val startTime = syncDate.atStartOfDay(zoneId).toInstant()
         val endTime = syncDate.plusDays(1).atStartOfDay(zoneId).toInstant()
+
+        Log.d(TAG, "Querying steps for $syncDate ($startTime → $endTime) zone=$zoneId")
 
         val response = client.aggregate(
             AggregateRequest(
@@ -50,7 +56,9 @@ class HealthConnectRepository(context: Context) {
             )
         )
 
-        return response[StepsRecord.COUNT_TOTAL] ?: 0L
+        val steps = response[StepsRecord.COUNT_TOTAL] ?: 0L
+        Log.i(TAG, "Health Connect returned $steps steps for $syncDate")
+        return steps
     }
 
     /**
@@ -59,4 +67,8 @@ class HealthConnectRepository(context: Context) {
      * It delegates to [getPreviousDaySteps] so the app always syncs the last fully completed day.
      */
     suspend fun getTodaySteps(): Long = getPreviousDaySteps()
+
+    companion object {
+        private const val TAG = "HealthConnectRepository"
+    }
 }
