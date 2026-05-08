@@ -54,7 +54,7 @@ class SyncWorker(
         }
 
         val steps = repository.getPreviousDaySteps()
-        val calories = repository.getPreviousDayCalories()
+        val calories = repository.getPreviousDayCalories(steps)
         apiClient.postSteps(syncDate, steps, calories)
         stateStore.markDateSynced(syncDate, steps)
 

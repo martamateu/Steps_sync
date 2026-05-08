@@ -6,6 +6,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.stepssync.config.Constants
@@ -22,7 +23,8 @@ class HealthConnectRepository(context: Context) {
 
     val requiredPermissions: Set<String> = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
     )
 
     fun sdkStatus(): Int =
@@ -63,21 +65,36 @@ class HealthConnectRepository(context: Context) {
         return steps
     }
 
-    suspend fun getPreviousDayCalories(): Double {
+    suspend fun getPreviousDayCalories(steps: Long): Double {
         val syncDate = previousDayDate()
         val startTime = syncDate.atStartOfDay(zoneId).toInstant()
         val endTime = syncDate.plusDays(1).atStartOfDay(zoneId).toInstant()
+        val timeRange = TimeRangeFilter.between(startTime, endTime)
 
-        val response = client.aggregate(
-            AggregateRequest(
-                metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
-                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-            )
+        // 1. Try active calories
+        val activeResponse = client.aggregate(
+            AggregateRequest(setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL), timeRange)
         )
+        val active = activeResponse[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+        if (active > 0.0) {
+            Log.i(TAG, "Using active calories: $active kcal for $syncDate")
+            return active
+        }
 
-        val kcal = response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
-        Log.i(TAG, "Health Connect returned $kcal kcal for $syncDate")
-        return kcal
+        // 2. Fallback to total calories
+        val totalResponse = client.aggregate(
+            AggregateRequest(setOf(TotalCaloriesBurnedRecord.ENERGY_TOTAL), timeRange)
+        )
+        val total = totalResponse[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
+        if (total > 0.0) {
+            Log.i(TAG, "Using total calories: $total kcal for $syncDate")
+            return total
+        }
+
+        // 3. Estimate from steps (~0.04 kcal/step)
+        val estimated = steps * 0.04
+        Log.w(TAG, "No calorie data in Health Connect, estimating $estimated kcal from $steps steps")
+        return estimated
     }
 
     /**
